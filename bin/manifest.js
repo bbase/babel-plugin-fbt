@@ -90,7 +90,7 @@ fs.writeFileSync(argv['enum-manifest'], JSON.stringify(enumManifest));
 // Find source files that are fbt-containing candidates
 const srcFiles = lines(
   execSync(
-    "find . -type f -iname '*.js' | xargs grep -E -l '\\b[Ff]b[st]\\b'",
+    "find . -type f -iname '*.tsx' | xargs grep -E -l '\\b[Ff]b[st]\\b'",
     {cwd: argv.src},
   ),
 ).map(relpath => path.relative(argv.root, path.resolve(argv.src, relpath)));
