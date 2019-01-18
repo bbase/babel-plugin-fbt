@@ -25,8 +25,8 @@
 // throw out the baby with the bath water and disable the whole shebang.
 /* eslint fb-www/comma-dangle: "off" */
 
-const docblock = require('../util/docblock');
-const {isRequireAlias} = require('../util/require-check');
+const {RequireCheck} = require('fb-babel-plugin-utils');
+const {isRequireAlias} = RequireCheck;
 const autoWrap = require('./fbt-auto-wrap');
 const fbtMethodCallVisitors = require('./fbt-method-call-visitors');
 const namespacedElementsArgsHandler = require('./fbt-namespaced-args-handler');
@@ -57,9 +57,12 @@ const {
   throwAt,
   validateNamespacedFbtElement,
 } = require('./FbtUtil');
+const fbtHashKey = require('./fbt-hash-key');
+const FbtShiftEnums = require('./fbt-shift-enums');
 const JSFbtBuilder = require('./js-fbt-builder');
 const fbtChecker = FbtNodeChecker.forModule(FBT);
 const fbsChecker = FbtNodeChecker.forModule(FBS);
+const {parse: parseDocblock} = require('jest-docblock');
 
 /**
  * Default options passed from a docblock.
@@ -259,10 +262,6 @@ function BabelPluginFbt(babel) {
           }
         }
 
-        if (options.doNotExtract) {
-          return;
-        }
-
         if (isTable) {
           texts = normalizeTableTexts(
             extractTableTexts(
@@ -315,7 +314,7 @@ function BabelPluginFbt(babel) {
           visitor.opts.reactNativeMode,
         );
 
-        if (visitor.opts.collectFbt) {
+        if (visitor.opts.collectFbt && !phrase.doNotExtract) {
           if (visitor.opts.auxiliaryTexts) {
             phrase.texts = texts;
           }
@@ -568,17 +567,15 @@ BabelPluginFbt.getChildToParentRelationships = function() {
   return childToParent || {};
 };
 
-BabelPluginFbt.getDefaultOptions = function() {
-  return defaultOptions;
-};
-
 function initExtraOptions(state) {
   Object.assign(ValidFbtOptions, state.opts.extraOptions || {});
 }
 
 function initDefaultOptions(state) {
   defaultOptions = {};
-  const fbtDocblockOptions = docblock.getFromState(state).fbt;
+  const comment = state.file.ast.comments[0];
+  const docblock = (comment && comment.value) || '';
+  const fbtDocblockOptions = parseDocblock(docblock).fbt;
   if (fbtDocblockOptions) {
     defaultOptions = JSON.parse(fbtDocblockOptions);
     Object.keys(defaultOptions).forEach(o => checkOption(o, ValidFbtOptions));
@@ -696,5 +693,8 @@ function addEnclosingString(childIdx, parentIdx) {
 function getUnknownCommonStringErrorMessage(moduleName, text) {
   return `Unknown string "${text}" for <${moduleName} common={true}>`;
 }
+
+BabelPluginFbt.fbtHashKey = fbtHashKey;
+BabelPluginFbt.FbtShiftEnums = FbtShiftEnums;
 
 module.exports = BabelPluginFbt;
